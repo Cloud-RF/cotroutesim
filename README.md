@@ -1,12 +1,13 @@
 # CoT route simulator
 
-This script takes a KML file containing a placemark with a linestring, and uses it to place a user defined number of bots around the route.
-The bots will follow the route at a user defined interval so you could make vehicles follow a circuit.
+This script takes a KML file containing a placemark with a linestring, and uses it to place a user defined number of bots around the route which are pushed to a TAK server using Cursor-on-Target XML.
+
+The bots will follow the route at a user defined interval so you could make vehicles follow a circuit...
 
 ![image](nyc_demo.jpg)
 
 ## Requirements
- - A TAK server IP with SSL
+ - A TAK server IP with SSL (https://github.com/Cloud-RF/tak-server)
  - The CA file named as ca.pem
  - User certificates named as simulator.pem and simulator.key
  - A KML file containing a single path, no folders etc.
