@@ -6,7 +6,9 @@ The bots will follow the route at a user defined interval so you could make vehi
 
 ![image](nyc_demo.jpg)
 
-## Requirements
+**The script can be run with or without a TAK Server. Without a server it will send a UDP broadcast on 4242.**
+
+## Server requirements
  - A TAK server IP with SSL (https://github.com/Cloud-RF/tak-server)
  - The CA file named as ca.pem
  - User certificates named as simulator.pem and simulator.key
@@ -18,14 +20,18 @@ The bots will follow the route at a user defined interval so you could make vehi
  3. Create a hosts entry in /etc/hosts for takserver and your server IP to pass SSL validation
 
     
- #
-
     pip3 install pykml requests
 
 
 ## Usage
 
-    python3 simulate.py kml/NYC_Marathon.kml takserver
+### Serverless (UDP)
+
+    python3 simulate.py kml/NYC_Marathon.kml
+
+### Server (TCP)
+
+    python3 simulate.py kml/NYC_Marathon.kml 192.168.1.2
 
 ### Notes
 The interval, number of bots and TCP port can be changed within the top of the script. 

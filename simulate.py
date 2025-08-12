@@ -20,8 +20,8 @@ route = []
 
 # BOT VARIABLES
 speed = 5 # seconds
-bots = 100 # bots to insert. These will share the same cert but TAK server allows this madness
-interpolation=10 # Smooth our KML route to fine(r) points
+bots = 4 # bots to insert. These will share the same cert but TAK server allows this madness
+interpolation=1 # Smooth our KML route to fine(r) points
 
 # TAK SERVER VARIABLES
 TAK_SERVER_PORT = 8089        		# The SSL / CoT port used by the server for XML
@@ -29,11 +29,17 @@ SSL_VERIFY = False                      # Set to False for a self signed cert on
 UDP_BUFFER_SIZE = 4096
 
 if len(sys.argv) < 2:
-	print("ERROR: Need a KML and a TAK server eg. simulate.py {KML file} {TAK server IP/domain}")
+	print("No KML file specified eg. simulate.py {KML file}")
 	quit()
 
+takserver = ""
+if len(sys.argv) < 3:
+	print("No TAK server specified. Sending UDP broadcast instead. eg. simulate.py {KML file} {Server IP}")
+else:
+	takserver = sys.argv[2]
+
 kml = sys.argv[1]
-takserver = sys.argv[2]
+
 
 if len(sys.argv) > 3:
 	speed = int(sys.argv[3])
@@ -66,7 +72,7 @@ for pm in xml.Placemark:
 	for pt in path.strip("\t\n").split("\n"):
 		point = pt.split(",")
 		if len(point) > 2:
-			print(point)
+			#print(point)
 			route.append([float(point[1]),float(point[0])])
 
 # Interpolate the points 
@@ -91,41 +97,59 @@ def register(bot):
 	tots=(datetime.datetime.now()+datetime.timedelta(minutes=1)).strftime('%Y-%m-%dT%H:%M:%SZ')
 	msg='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\
 	<event version="2.0" uid="'+bot["uid"]+'" type="a-f-G-U-C" time="'+ts+'" start="'+ts+'" stale="'+tots+'" how="h-e">\
-	<point lat="'+str(bot["lat"])+'" lon="'+str(bot["lon"])+'" hae="0" ce="9999999" le="9999999"/>\
-	<detail><takv os="0" version="0" device="" platform="BOT"/>\
+	<point lat="'+str(bot["lat"])+'" lon="'+str(bot["lon"])+'" hae="1" ce="9999999" le="9999999"/>\
+	<detail><takv os="0" version="1.0" device="" platform="BOT"/>\
 	<contact callsign="'+bot["cs"]+'" endpoint="*:-1:stcp"/><uid Droid="'+bot["uid"]+'"/>\
 	<precisionlocation altsrc="" geopointsrc="USER"/><__group role="Team Member" name="Cyan"/>\
 	<status battery="100"/><track course="0.0" speed="0.0"/></detail></event>'
 	return msg.encode("utf-8")
 
 start=0
-multiplier=len(route)/bots
+multiplier=10#len(route)/bots
 
-# Connect to a TAK server with SSL + mutual auth
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-ssl = context.wrap_socket(sock, server_side=False, server_hostname=TAK_SERVER_ADDRESS)
+if takserver:
+	# Connect to a TAK server with SSL + mutual auth
+	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	ssl = context.wrap_socket(sock, server_side=False, server_hostname=TAK_SERVER_ADDRESS)
+else:
+	# UDP BCAST :)
+	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+	sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
-with ssl as s:
-	s.connect((TAK_SERVER_ADDRESS, TAK_SERVER_PORT))
+if takserver:
+	with ssl as s:
+		s.connect((TAK_SERVER_ADDRESS, TAK_SERVER_PORT))
+else:
 	while True:
-		v = 1
-		print(start)
-		while v < bots:
-			name = "BOT%02d" % v
-			p = round(start + (v*multiplier))-len(route)
 
-			lat=route[p][0] 
-			lon=route[p][1] 
+		# Both SSL and UDP start here
+		while True:
+			v = 1
+			print(start)
+			while v <= bots:
+				name = "CS%02d" % v
+				p = round(start + (v*multiplier))
+				if p > len(route)-1:
+					p = p - len(route)
 
-			if p >= len(route):
-				p -= len(route)
+				lat=route[p][0] 
+				lon=route[p][1] 
 
-			reported=datetime.datetime.now().isoformat()
-			v+=1
-			bot = {"uid": name,"cs": name, "lat": lat, "lon": lon}
-			print(bot)
-			s.sendall(register(bot)) 
-		start+=1
-		if start == len(route): # back to the start!
-			start=0
-		time.sleep(speed)
+				if p >= len(route):
+					p -= len(route)
+
+				reported=datetime.datetime.now().isoformat()
+				v+=1
+				bot = {"uid": name,"cs": name, "lat": lat, "lon": lon}
+				print("%s @ position %d" % (bot,p))
+				if takserver:
+					s.sendall(register(bot)) 
+				else:
+					sock.sendto(register(bot), ('<broadcast>', 4242))
+
+			start+=1
+			if start == len(route): # back to the start!
+				print("Start = 0")
+				start=0
+			time.sleep(speed)
