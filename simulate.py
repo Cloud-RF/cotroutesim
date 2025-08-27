@@ -19,9 +19,9 @@ import socket, json, requests
 route = []
 
 # BOT VARIABLES
-speed = 5 # seconds
-bots = 4 # bots to insert. These will share the same cert but TAK server allows this madness
-interpolation=1 # Smooth our KML route to fine(r) points
+speed = 20 # seconds
+bots = 8 # bots to insert. These will share the same cert but TAK server allows this madness
+interpolation=3 # Smooth our KML route to fine(r) points
 
 # TAK SERVER VARIABLES
 TAK_SERVER_PORT = 8089        		# The SSL / CoT port used by the server for XML
@@ -60,16 +60,17 @@ ca_cert = ssl_path+'ca.pem'
 client_cert = ssl_path+'simulator.pem'               
 client_key = ssl_path+'simulator.key'     
 
-context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=ca_cert)
-context.options |= ssl.OP_NO_SSLv2 
-context.options |= ssl.OP_NO_SSLv3
-context.load_cert_chain(certfile=client_cert, keyfile=client_key,password='atakatak')
+if takserver:
+	context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=ca_cert)
+	context.options |= ssl.OP_NO_SSLv2 
+	context.options |= ssl.OP_NO_SSLv3
+	context.load_cert_chain(certfile=client_cert, keyfile=client_key,password='atakatak')
 	
 
 # Extract coordinates into array
 for pm in xml.Placemark:
 	path = str(pm.LineString.coordinates)
-	for pt in path.strip("\t\n").split("\n"):
+	for pt in path.strip("\t\n").split(" "):
 		point = pt.split(",")
 		if len(point) > 2:
 			#print(point)
@@ -99,13 +100,13 @@ def register(bot):
 	<event version="2.0" uid="'+bot["uid"]+'" type="a-f-G-U-C" time="'+ts+'" start="'+ts+'" stale="'+tots+'" how="h-e">\
 	<point lat="'+str(bot["lat"])+'" lon="'+str(bot["lon"])+'" hae="1" ce="9999999" le="9999999"/>\
 	<detail><takv os="0" version="1.0" device="" platform="BOT"/>\
-	<contact callsign="'+bot["cs"]+'" endpoint="*:-1:stcp"/><uid Droid="'+bot["uid"]+'"/>\
+	<contact callsign="'+bot["B"]+'" endpoint="*:-1:stcp"/><uid Droid="'+bot["uid"]+'"/>\
 	<precisionlocation altsrc="" geopointsrc="USER"/><__group role="Team Member" name="Cyan"/>\
 	<status battery="100"/><track course="0.0" speed="0.0"/></detail></event>'
 	return msg.encode("utf-8")
 
 start=0
-multiplier=10#len(route)/bots
+multiplier=len(route)/bots
 
 if takserver:
 	# Connect to a TAK server with SSL + mutual auth
@@ -128,7 +129,7 @@ else:
 			v = 1
 			print(start)
 			while v <= bots:
-				name = "CS%02d" % v
+				name = "B%02d" % v
 				p = round(start + (v*multiplier))
 				if p > len(route)-1:
 					p = p - len(route)
@@ -141,7 +142,7 @@ else:
 
 				reported=datetime.datetime.now().isoformat()
 				v+=1
-				bot = {"uid": name,"cs": name, "lat": lat, "lon": lon}
+				bot = {"uid": name,"B": name, "lat": lat, "lon": lon}
 				print("%s @ position %d" % (bot,p))
 				if takserver:
 					s.sendall(register(bot)) 

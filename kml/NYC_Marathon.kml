@@ -35,7 +35,8 @@
 <tilt>60</tilt>
 <altitudeMode>clampToGround</altitudeMode>
 </LookAt>
-<name><![CDATA[NYC Marathon]]> </name><description><![CDATA[]]></description><Placemark>
+<name><![CDATA[NYC Marathon]]> </name><description><![CDATA[]]></description>
+<Placemark>
 <name><![CDATA[Fly-Over Tour]]></name>
 <description><![CDATA[]]></description>
 <styleUrl>#RoutePath</styleUrl>
